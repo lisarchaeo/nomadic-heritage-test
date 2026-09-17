@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repository access test</title>
+<style>
+  body { margin: 0; background: #F7F5F0; color: #1F1D1A; font: 16px/1.5 system-ui, sans-serif; }
+  .stripe { height: 8px; background: linear-gradient(90deg, #B8321F 0 25%, #E0A22B 25% 50%, #1E6B66 50% 75%, #1E2A4A 75%); }
+  main { max-width: 820px; margin: 0 auto; padding: 24px 20px 64px; }
+  h1 { font-size: 28px; margin: 8px 0 4px; }
+  section { border-top: 1px solid #CFC8BB; padding: 18px 0; }
+  h2 { font-size: 18px; margin: 0 0 8px; }
+  .status { font-weight: 600; }
+  .ok { color: #1E6B66; } .bad { color: #B8321F; }
+  img, video, iframe { max-width: 100%; display: block; margin-top: 10px; background: #E8E3D8; }
+  input { width: 100%; box-sizing: border-box; padding: 10px; font: inherit; border: 1.5px solid #CFC8BB; border-radius: 10px; }
+  button { margin-top: 8px; padding: 10px 16px; font: inherit; border: 0; border-radius: 10px; background: #1E2A4A; color: #fff; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="stripe"></div>
+<main>
+  <h1>Repository access test</h1>
+  <p>Each check below runs in your browser, the way a visitor's phone or laptop would. Screenshot the whole page and send it back.</p>
+
+  <section>
+    <h2>1. Item details from the API</h2>
+    <p class="status" id="api">Checking…</p>
+  </section>
+
+  <section>
+    <h2>2. Thumbnail</h2>
+    <p class="status" id="thumbStatus">Loading…</p>
+    <img id="thumb" alt="Thumbnail of Work in progress in a yurt">
+  </section>
+
+  <section>
+    <h2>3. Figshare's embed player</h2>
+    <p>If a preview of the item appears in the box, embedding works.</p>
+    <iframe src="https://widgets.figshare.com/articles/32075862/embed?show_title=1" width="640" height="420" allowfullscreen frameborder="0" title="Figshare embed test"></iframe>
+  </section>
+
+  <section>
+    <h2>4. A larger preview image</h2>
+    <p>On the repository page for any photo, right-click the large preview, choose "Copy image address", paste it here and press Test.</p>
+    <input id="imgUrl" placeholder="Paste the image address here">
+    <button onclick="testImage()">Test image</button>
+    <p class="status" id="imgStatus"></p>
+    <img id="img" alt="Preview image test">
+  </section>
+
+  <section>
+    <h2>5. A video preview</h2>
+    <p>On the repository page for a video, right-click the playing video, choose "Copy video address", paste it here and press Test.</p>
+    <input id="vidUrl" placeholder="Paste the video address here">
+    <button onclick="testVideo()">Test video</button>
+    <p class="status" id="vidStatus"></p>
+    <video id="vid" controls width="640"></video>
+  </section>
+</main>
+<script>
+  function mark(el, ok, text) { el.textContent = (ok ? "✅ " : "❌ ") + text; el.className = "status " + (ok ? "ok" : "bad"); }
+
+  fetch("https://api.figshare.com/v2/articles/32075862")
+    .then(r => r.ok ? r.json() : Promise.reject("code " + r.status))
+    .then(d => {
+      mark(document.getElementById("api"), true, "Worked: \"" + d.title + "\", first author " + d.authors[0].full_name);
+      const t = document.getElementById("thumb");
+      t.onload = () => mark(document.getElementById("thumbStatus"), true, "Worked (" + t.naturalWidth + " × " + t.naturalHeight + " pixels)");
+      t.onerror = () => mark(document.getElementById("thumbStatus"), false, "Failed to load");
+      t.src = d.thumb;
+    })
+    .catch(e => {
+      mark(document.getElementById("api"), false, "Failed (" + e + ")");
+      mark(document.getElementById("thumbStatus"), false, "Skipped, because the API check failed");
+    });
+
+  function testImage() {
+    const u = document.getElementById("imgUrl").value.trim(), i = document.getElementById("img"), s = document.getElementById("imgStatus");
+    if (!u) { mark(s, false, "Paste an address first"); return; }
+    s.textContent = "Loading…"; s.className = "status";
+    i.onload = () => mark(s, true, "Worked (" + i.naturalWidth + " × " + i.naturalHeight + " pixels)");
+    i.onerror = () => mark(s, false, "Failed to load from this address");
+    i.src = u;
+  }
+
+  function testVideo() {
+    const u = document.getElementById("vidUrl").value.trim(), v = document.getElementById("vid"), s = document.getElementById("vidStatus");
+    if (!u) { mark(s, false, "Paste an address first"); return; }
+    s.textContent = "Loading…"; s.className = "status";
+    v.onloadedmetadata = () => mark(s, true, "Worked (" + v.videoWidth + " × " + v.videoHeight + ", " + Math.round(v.duration) + " seconds). Press play to check it streams.");
+    v.onerror = () => mark(s, false, "Failed to load from this address");
+    v.src = u;
+  }
+</script>
+</body>
+</html>
